@@ -1,17 +1,22 @@
 /* global BigInt */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSwitchChain, useAccount, useChainId, useConnect } from 'wagmi';
 import { ethers } from 'ethers';
 import { metaMask } from '@wagmi/connectors';
 import './WhitelistBox.css';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const WhitelistBox = () => {
+  const whitelistStartRef = useRef(Date.now() + 60 * DAY_MS);
+  const whitelistEndRef = useRef(whitelistStartRef.current + 30 * DAY_MS);
   const [timeLeft, setTimeLeft] = useState('');
   const [joined, setJoined] = useState(3);
   const [currency, setCurrency] = useState('BNB');
   const [bnbAmount, setBnbAmount] = useState('0.008');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
 
   const { switchChainAsync } = useSwitchChain();
   const { isConnected, address } = useAccount();
@@ -19,61 +24,109 @@ const WhitelistBox = () => {
   const { connectAsync } = useConnect();
 
   const recipientAddress = '0x7cd14dd705f5e05d8b1b9853245cc60bd8251ff4';
-  const whitelistStart = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).getTime();
-  const whitelistEnd = whitelistStart + 30 * 24 * 60 * 60 * 1000;
-
   const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955';
   const USDT_ABI = [
-    'function approve(address spender, uint256 amount) public returns (bool)',
     'function transfer(address to, uint amount) public returns (bool)',
     'function balanceOf(address account) public view returns (uint256)',
   ];
 
-  // Fetch BNB price
+  // Dil desteği için mesajlar
+  const messages = {
+    en: {
+      connectingWallet: 'Connecting wallet...',
+      walletConnected: 'Wallet connected, checking network...',
+      switchingNetwork: 'Switching to BSC network...',
+      checkingBalance: 'Checking balance...',
+      sendingBNB: (gasCost) => `Sending BNB (~${gasCost} BNB gas fee)`,
+      sendingUSDT: (gasCost) => `Sending USDT (~${gasCost} BNB gas fee)`,
+      awaitingConfirmation: 'Awaiting transaction confirmation...',
+      paymentSuccessful: 'Payment successful!',
+      noMetaMask: 'MetaMask not detected. Please install MetaMask and try again.',
+      mobileRedirect: 'Redirecting to MetaMask app...',
+      connectionRejected: 'Wallet connection rejected.',
+      connectionError: (error) => `Connection error: ${error}`,
+      networkSwitchRejected: 'Network switch rejected. Please switch to BSC in MetaMask.',
+      networkSwitchError: (error) => `Network switch error: ${error}`,
+      insufficientBNB: (required, available) => `Insufficient BNB balance. Required: ${required} BNB, Available: ${available} BNB.`,
+      insufficientUSDT: (available) => `Insufficient USDT balance. Required: 5 USDT, Available: ${available} USDT.`,
+      insufficientGas: (required) => `Insufficient BNB for gas fees. Required: ${required} BNB.`,
+      transactionError: 'Transaction failed or was canceled. Please check your wallet.',
+      apiError: 'Failed to fetch BNB price. Please try again later.',
+    },
+    tr: {
+      connectingWallet: 'Cüzdan bağlanıyor...',
+      walletConnected: 'Cüzdan bağlandı, ağ kontrol ediliyor...',
+      switchingNetwork: 'BSC ağına geçiliyor...',
+      checkingBalance: 'Bakiye kontrol ediliyor...',
+      sendingBNB: (gasCost) => `BNB gönderiliyor (~${gasCost} BNB gas ücreti)`,
+      sendingUSDT: (gasCost) => `USDT gönderiliyor (~${gasCost} BNB gas ücreti)`,
+      awaitingConfirmation: 'İşlem onayı bekleniyor...',
+      paymentSuccessful: 'Ödeme başarılı!',
+      noMetaMask: 'MetaMask yüklü değil. Lütfen MetaMask kurun ve tekrar deneyin.',
+      mobileRedirect: 'MetaMask uygulamasına yönlendiriliyor...',
+      connectionRejected: 'Cüzdan bağlantısı reddedildi.',
+      connectionError: (error) => `Bağlantı hatası: ${error}`,
+      networkSwitchRejected: 'Ağ değiştirme reddedildi. Lütfen MetaMask’ten BSC ağına geçin.',
+      networkSwitchError: (error) => `Ağ değiştirme hatası: ${error}`,
+      insufficientBNB: (required, available) => `Yetersiz BNB bakiyesi. Gerekli: ${required} BNB, Mevcut: ${available} BNB.`,
+      insufficientUSDT: (available) => `Yetersiz USDT bakiyesi. Gerekli: 5 USDT, Mevcut: ${available} USDT.`,
+      insufficientGas: (required) => `Yetersiz BNB bakiyesi. Gas için ${required} BNB gerekli.`,
+      transactionError: 'İşlem başarısız veya iptal edildi. Lütfen cüzdanınızı kontrol edin.',
+      apiError: 'BNB fiyatı alınamadı. Lütfen daha sonra tekrar deneyin.',
+    },
+  };
+
+  // Tarayıcı dilini tespit et (varsayılan: İngilizce)
+  const userLanguage = navigator.language.startsWith('tr') ? 'tr' : 'en';
+
+  /* ---------------- BNB fiyatını çek ---------------- */
   useEffect(() => {
     const fetchBnbPrice = async () => {
       try {
-        const res = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd'
-        );
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd');
+        if (!res.ok) throw new Error('BNB fiyatı alınamadı.');
         const data = await res.json();
         const price = data.binancecoin.usd;
-        const amount = (5 / price).toFixed(6);
-        setBnbAmount(amount);
+        setBnbAmount((5 / price).toFixed(6));
       } catch {
-        setBnbAmount('0.008');
+        alert(messages[userLanguage].apiError);
+        setBnbAmount('--');
       }
     };
     fetchBnbPrice();
+  }, [userLanguage]);
+
+  /* ---------------- Geri sayım ---------------- */
+  useEffect(() => {
+    const getTimeLeft = () => {
+      const now = Date.now();
+      const whitelistStart = whitelistStartRef.current;
+      const whitelistEnd = whitelistEndRef.current;
+
+      const target = now < whitelistStart ? whitelistStart : now < whitelistEnd ? whitelistEnd : null;
+
+      if (!target) return 'Whitelist has ended!';
+
+      const diff = Math.max(0, target - now);
+      const days = Math.floor(diff / DAY_MS);
+      const hrs = Math.floor((diff % DAY_MS) / (60 * 60 * 1000));
+      const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+      const secs = Math.floor((diff % (60 * 1000)) / 1000);
+
+      return `${days}d ${hrs}h ${mins}m ${secs}s`;
+    };
+
+    setTimeLeft(getTimeLeft());
+    const interval = setInterval(() => {
+      const newTimeLeft = getTimeLeft();
+      setTimeLeft(newTimeLeft);
+      if (newTimeLeft === 'Whitelist has ended!') clearInterval(interval);
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  // Countdown timer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (now < whitelistStart) {
-        const diff = whitelistStart - now;
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / 1000 / 60) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-      } else if (now >= whitelistStart && now <= whitelistEnd) {
-        const diff = whitelistEnd - now;
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / 1000 / 60) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-      } else {
-        setTimeLeft('');
-        clearInterval(interval);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [whitelistStart, whitelistEnd]);
-
-  // Confetti effect (runs continuously)
+  /* ---------------- Confetti efekti ---------------- */
   useEffect(() => {
     const whitelistBox = document.querySelector('.whitelist-box');
     if (!whitelistBox) return;
@@ -91,7 +144,7 @@ const WhitelistBox = () => {
         confetti.style.height = `${height}px`;
         const boxWidth = whitelistBox.offsetWidth;
         confetti.style.left = `${Math.random() * boxWidth}px`;
-        confetti.style.top = `0px`; // Start from the very top
+        confetti.style.top = `0px`;
         confetti.style.animationDuration = `${Math.random() * 4 + 8}s`;
         whitelistBox.appendChild(confetti);
         confetti.addEventListener('animationend', () => confetti.remove());
@@ -101,144 +154,139 @@ const WhitelistBox = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Join whitelist function
+  /* ---------------- Whitelist’e katıl ---------------- */
   const joinWhitelist = async () => {
     if (!window.ethereum) {
-      alert('MetaMask is not installed. Please install MetaMask and try again.');
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        alert(messages[userLanguage].mobileRedirect);
+        window.location.href = 'https://metamask.app.link/dapp/' + window.location.host;
+      } else {
+        alert(messages[userLanguage].noMetaMask);
+      }
       return;
     }
 
-    console.log('joinWhitelist called:', { isConnected, address, chainId });
-    if (!isConnected || !address) {
-      try {
-        console.log('Attempting to connect MetaMask');
-        await connectAsync({ connector: metaMask() });
-        console.log('MetaMask connected successfully');
-        // Removed return to continue flow
-      } catch (err) {
-        console.error('MetaMask connection error:', err);
-        alert('Failed to connect MetaMask. Please ensure MetaMask is installed and try again.');
-        return;
-      }
-    }
-
     setLoading(true);
+    setStatus(messages[userLanguage].connectingWallet);
+
     try {
+      if (!isConnected || !address) {
+        await connectAsync({ connector: metaMask() });
+        setStatus(messages[userLanguage].walletConnected);
+      }
+
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      console.log('Signer obtained:', await signer.getAddress());
 
       if (chainId !== 56) {
-        console.log('Switching to BSC (chainId: 56)');
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: '0x38',
-              chainName: 'Binance Smart Chain',
-              rpcUrls: ['https://bsc-dataseed.binance.org/'],
-              nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-              blockExplorerUrls: ['https://bscscan.com'],
-            }],
-          });
-          await switchChainAsync({ chainId: 56 });
-          console.log('Switched to BSC');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (switchError) {
-          console.error('Chain switch error:', switchError);
-          alert('Please manually switch to Binance Smart Chain (BSC) in MetaMask and try again.');
-          return;
+        setStatus(messages[userLanguage].switchingNetwork);
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x38' }],
+        });
+        let attempts = 0;
+        let net = await provider.getNetwork();
+        while (net.chainId !== 56n && attempts < 5) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          net = await provider.getNetwork();
+          attempts++;
         }
+        if (net.chainId !== 56n) throw new Error('Network switch failed');
       }
+
+      setStatus(messages[userLanguage].checkingBalance);
+      const feeData = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice || ethers.parseUnits('5', 'gwei');
 
       if (currency === 'BNB') {
         const balance = await provider.getBalance(address);
         const requiredAmount = ethers.parseEther(bnbAmount);
-        const gasPrice = await provider.getFeeData().then(data => data.gasPrice || ethers.parseUnits('5', 'gwei'));
         const gasEstimate = await provider.estimateGas({
           to: recipientAddress,
-          value: ethers.parseEther(bnbAmount),
+          value: requiredAmount,
         });
-        // eslint-disable-next-line no-undef
         const gasCost = gasPrice * BigInt(gasEstimate);
         const totalRequired = requiredAmount + gasCost;
 
-        console.log('BNB balance check:', {
-          balance: ethers.formatEther(balance),
-          requiredAmount: ethers.formatEther(requiredAmount),
-          gasCost: ethers.formatEther(gasCost),
-          totalRequired: ethers.formatEther(totalRequired),
-        });
-
         if (balance < totalRequired) {
-          throw new Error(`Insufficient BNB balance. Need ${ethers.formatEther(totalRequired)} BNB, have ${ethers.formatEther(balance)} BNB.`);
+          throw new Error(messages[userLanguage].insufficientBNB(
+            ethers.formatEther(totalRequired),
+            ethers.formatEther(balance)
+          ));
         }
 
-        console.log('Sending BNB:', bnbAmount);
+        setStatus(messages[userLanguage].sendingBNB(ethers.formatEther(gasCost)));
         const tx = await signer.sendTransaction({
           to: recipientAddress,
-          value: ethers.parseEther(bnbAmount),
+          value: requiredAmount,
           gasLimit: gasEstimate,
+          gasPrice,
         });
-        console.log('BNB transaction sent:', tx.hash);
+        setStatus(messages[userLanguage].awaitingConfirmation);
         await tx.wait();
-        console.log('BNB transaction confirmed');
       } else if (currency === 'USDT') {
         const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
         const balance = await usdtContract.balanceOf(address);
         const requiredAmount = ethers.parseUnits('5', 18);
-        const gasPrice = await provider.getFeeData().then(data => data.gasPrice || ethers.parseUnits('5', 'gwei'));
         const gasEstimate = await usdtContract.estimateGas.transfer(recipientAddress, requiredAmount);
-        // eslint-disable-next-line no-undef
         const gasCost = gasPrice * BigInt(gasEstimate);
         const bnbBalance = await provider.getBalance(address);
 
-        console.log('USDT balance check:', {
-          usdtBalance: ethers.formatUnits(balance, 18),
-          requiredAmount: ethers.formatUnits(requiredAmount, 18),
-          bnbBalance: ethers.formatEther(bnbBalance),
-          gasCost: ethers.formatEther(gasCost),
-        });
-
         if (balance < requiredAmount) {
-          throw new Error(`Insufficient USDT balance. Need 5 USDT, have ${ethers.formatUnits(balance, 18)} USDT.`);
+          throw new Error(messages[userLanguage].insufficientUSDT(ethers.formatUnits(balance, 18)));
         }
         if (bnbBalance < gasCost) {
-          throw new Error(`Insufficient BNB for gas fees. Need ${ethers.formatEther(gasCost)} BNB, have ${ethers.formatEther(bnbBalance)} BNB.`);
+          throw new Error(messages[userLanguage].insufficientGas(ethers.formatEther(gasCost)));
         }
 
-        console.log('Approving USDT:', requiredAmount.toString());
-        const approveGasEstimate = await usdtContract.estimateGas.approve(recipientAddress, requiredAmount);
-        const approveTx = await usdtContract.approve(recipientAddress, requiredAmount, { gasLimit: approveGasEstimate });
-        console.log('Approve transaction sent:', approveTx.hash);
-        await approveTx.wait();
-        console.log('Approve transaction confirmed');
-
-        console.log('Transferring USDT:', requiredAmount.toString());
-        const transferTx = await usdtContract.transfer(recipientAddress, requiredAmount, { gasLimit: gasEstimate });
-        console.log('Transfer transaction sent:', transferTx.hash);
-        await transferTx.wait();
-        console.log('Transfer transaction confirmed');
+        setStatus(messages[userLanguage].sendingUSDT(ethers.formatEther(gasCost)));
+        const transferTx = await usdtContract.transfer(recipientAddress, requiredAmount, {
+          gasLimit: gasEstimate,
+          gasPrice,
+        });
+        setStatus(messages[userLanguage].awaitingConfirmation);
+        await transferTx.wait(); // Hata düzeltildi: tx yerine transferTx
       }
 
       setJoined((prev) => prev + 1);
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 5000);
+      setStatus(messages[userLanguage].paymentSuccessful);
+      setTimeout(() => {
+        setSuccess(false);
+        setStatus('');
+      }, 5000);
     } catch (error) {
-      console.error('Transaction error:', error.message, error);
-      alert(error.message || 'Transaction failed or was canceled. Please check your wallet and try again.');
+      console.error('İşlem hatası:', error.message);
+      if (error.code === 4001 && error.message.includes('wallet_switchEthereumChain')) {
+        alert(messages[userLanguage].networkSwitchRejected);
+      } else if (error.code === 4001) {
+        alert(messages[userLanguage].connectionRejected);
+      } else if (error.message.includes('Network switch failed')) {
+        alert(messages[userLanguage].networkSwitchError(error.message));
+      } else if (error.message.includes('Connection error')) {
+        alert(messages[userLanguage].connectionError(error.message));
+      } else {
+        alert(messages[userLanguage].transactionError);
+      }
+    } finally {
+      setLoading(false);
+      setStatus('');
     }
-    setLoading(false);
   };
 
   return (
     <div className="whitelist-box">
       <h2>WHITELIST IS LIVE</h2>
-      <p className="fomo-message">
-        Most will scroll past. A few will enter. And only they will understand. 🚀
-
-      </p>
-      <p className="time-left"><span className="time-numbers">{timeLeft}</span></p>
+      <p>{joined} wallet joined so far ⚡</p>
+      <p className="fomo-message">Most will scroll past. A few will enter. And only they will understand. 🚀</p>
+      {timeLeft === 'Whitelist has ended!' ? (
+        <p className="time-left">Whitelist has ended!</p>
+      ) : (
+        <p className="time-left">
+          <span className="time-numbers">{timeLeft}</span>
+        </p>
+      )}
       <div className="currency-selector">
         <button
           className={`bnb-button ${currency === 'BNB' ? 'bnb-active' : ''}`}
@@ -255,15 +303,18 @@ const WhitelistBox = () => {
           USDT
         </button>
       </div>
-      <p className="price-info">
-        {currency === 'BNB' ? `${bnbAmount} BNB - 5 USD` : '5 USDT - 5 USD'}
-      </p>
-      <button className="join-btn" onClick={joinWhitelist} disabled={loading}>
-        {loading ? 'Processing...' : 'Join Now'}
+      <p className="price-info">{currency === 'BNB' ? `${bnbAmount} BNB - 5 USD` : '5 USDT - 5 USD'}</p>
+      <button
+        className="join-btn"
+        onClick={joinWhitelist}
+        disabled={loading || (currency === 'BNB' && bnbAmount === '--')}
+      >
+        {loading ? status : 'Join Now'}
       </button>
       <p className="join-fomo-message">
-Whitelist participants get early access to airdrops and discounted presale.
-Entries will close when the countdown ends – and the presale begins immediately.. 📄     </p>
+        Whitelist participants get early access to airdrops and discounted presale. Entries will close when the countdown
+        ends – and the presale begins immediately. 📄
+      </p>
       {success && <p style={{ color: 'limegreen', fontWeight: 'bold', marginTop: '10px' }}>Successful transaction!</p>}
     </div>
   );
