@@ -1,5 +1,5 @@
 /* global BigInt */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSwitchChain, useAccount, useChainId, useConnect } from 'wagmi';
 import { ethers } from 'ethers';
 import { metaMask } from '@wagmi/connectors';
@@ -8,8 +8,10 @@ import './WhitelistBox.css';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const WhitelistBox = () => {
-  const whitelistStartRef = useRef(Date.now() + 60 * DAY_MS);
-  const whitelistEndRef = useRef(whitelistStartRef.current + 30 * DAY_MS);
+  // Sabit başlangıç ve bitiş tarihi (UTC tabanlı, global kitle için)
+  const WHITELIST_START = new Date('2025-06-29T21:52:00Z').getTime(); // 30 Haziran 2025 00:52 +03:00 eşdeğeri
+  const WHITELIST_END = new Date('2025-08-28T21:52:00Z').getTime(); // 29 Ağustos 2025 00:52 +03:00 eşdeğeri
+
   const [timeLeft, setTimeLeft] = useState('');
   const [joined, setJoined] = useState(3);
   const [currency, setCurrency] = useState('BNB');
@@ -100,14 +102,11 @@ const WhitelistBox = () => {
   useEffect(() => {
     const getTimeLeft = () => {
       const now = Date.now();
-      const whitelistStart = whitelistStartRef.current;
-      const whitelistEnd = whitelistEndRef.current;
+      if (now >= WHITELIST_END) {
+        return 'Whitelist has ended!';
+      }
 
-      const target = now < whitelistStart ? whitelistStart : now < whitelistEnd ? whitelistEnd : null;
-
-      if (!target) return 'Whitelist has ended!';
-
-      const diff = Math.max(0, target - now);
+      const diff = Math.max(0, WHITELIST_END - now);
       const days = Math.floor(diff / DAY_MS);
       const hrs = Math.floor((diff % DAY_MS) / (60 * 60 * 1000));
       const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
@@ -120,7 +119,9 @@ const WhitelistBox = () => {
     const interval = setInterval(() => {
       const newTimeLeft = getTimeLeft();
       setTimeLeft(newTimeLeft);
-      if (newTimeLeft === 'Whitelist has ended!') clearInterval(interval);
+      if (newTimeLeft === 'Whitelist has ended!') {
+        clearInterval(interval);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -144,7 +145,7 @@ const WhitelistBox = () => {
         confetti.style.height = `${height}px`;
         const boxWidth = whitelistBox.offsetWidth;
         confetti.style.left = `${Math.random() * boxWidth}px`;
-        confetti.style.top = `0px`;
+        confetti.style.top = '0px';
         confetti.style.animationDuration = `${Math.random() * 4 + 8}s`;
         whitelistBox.appendChild(confetti);
         confetti.addEventListener('animationend', () => confetti.remove());
@@ -197,7 +198,7 @@ const WhitelistBox = () => {
 
       setStatus(messages[userLanguage].checkingBalance);
       const feeData = await provider.getFeeData();
-      const gasPrice = feeData.gasPrice || ethers.parseUnits('5', 'gwei');
+      const gasPrice = feeData.gasPrice ?? ethers.parseUnits('5', 'gwei');
 
       if (currency === 'BNB') {
         const balance = await provider.getBalance(address);
@@ -246,7 +247,7 @@ const WhitelistBox = () => {
           gasPrice,
         });
         setStatus(messages[userLanguage].awaitingConfirmation);
-        await transferTx.wait(); // Hata düzeltildi: tx yerine transferTx
+        await transferTx.wait();
       }
 
       setJoined((prev) => prev + 1);
