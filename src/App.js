@@ -275,6 +275,7 @@ function App() {
               <img src="/partners/binance.png" alt="binance" />
               <img src="/partners/uniswap.png" alt="uniswap" />
               <img src="/partners/solana.png" alt="solana" />
+              <img src="/partners/ethereum.png" alt="ethereum" />
               <img src="/partners/openai.png" alt="openai" className="openai-logo" />
             </div>
           </div>
