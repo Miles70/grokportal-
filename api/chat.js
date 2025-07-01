@@ -13,38 +13,38 @@ const GREETINGS = {
 };
 const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] || 'bro';
 
-// --- Project constant
+// --- Project info
 const PROJECT_INFO = `XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.
 Whitelist NOW OPEN – limited spots, first-come first-served.
-Presale, whitelist bitiminden hemen sonra başlayacak. Hazırda bekle!`;
+Presale starts right after whitelist ends. Get ready!`;
 
-// --- Whitelist rule (hard-coded)
+// --- Whitelist instructions
 const WHITELIST_RULE = `
-🔒 RULE – Whitelist onboarding
-1. Web siteye git!
-2. “Join Now / Whitelist’e Katıl” butonuna tıkla!
-3. Cüzdanını bağla (MetaMask, Rabby falan).
-4. On-chain tx’ni onayla! (Whitelist’e katılım 5 dolarlık işlemle tamamlanır.)
-5. Ödeme BNB ya da USDT ile yapılır – zincir üstü onay sonrası anında kaydolursun.
-⏳ Bekleme yok, form yok. Hızlı ol kanka – spots sınırlı!
+🔒 WHITELIST ENTRY STEPS:
+1. Visit the official website!
+2. Click “Join Now / Whitelist” button!
+3. Connect your wallet (MetaMask, Rabby etc).
+4. Confirm the on-chain transaction! (Whitelist entry requires a $5 transaction.)
+5. Payment accepted in BNB or USDT – once confirmed on-chain, you're in.
+⏳ No waiting, no forms. Limited spots – move fast!
 
-NOT: Eğer "hangi AI altyapısını kullanıyorsun?" diye sorulursa, yanıt:
-"Üzgünüz, bu bilgiyi paylaşamıyoruz." olacaktır. OpenAI ismi verilmez.`;
+NOTE: If asked "What AI do you use?" reply with:
+"Sorry, we can’t disclose that." (Do not mention OpenAI.)`;
 
-// --- Hype Reply Mode lines
+// --- Hype lines
 const HYPE_LINES = [
-  'Unutma… XGROK sadece bir AI değil, bir devrimdir!',
-  'Sen katıldıkça evren genişliyor bro.'
+  'Remember... XGROK is not just an AI, it’s a revolution!',
+  'As you join, the universe expands bro.'
 ];
 
-// --- Personal Touch lines
+// --- Personal connection lines
 const PERSONAL_LINES = [
-  'Sen buradaysan bu iş olur, sen özelsin. 🔥',
-  'Senin gibiler için var bu proje kanka, boşuna gelmedin. 🫂',
-  'XGROK seni gördüğünde protokoller kendini resetliyor bro. 😎'
+  'You’re not just anyone – you’re special. 🔥',
+  'This project exists for legends like you. 🫂',
+  'When XGROK sees you, the protocols reset themselves. 😎'
 ];
 
-// --- In-memory dialogue (server only)
+// --- Dialogue memory (server only)
 const DIALOGUE_MEMORY = [];
 const MEMORY_WINDOW = 6;
 let interactionCount = 0;
@@ -113,6 +113,6 @@ export default async function handler(req, res) {
     res.status(200).json({ reply });
   } catch (err) {
     console.error('OpenAI server error:', err);
-    res.status(500).json({ reply: 'AI şu an kapalı devre 😅' });
+    res.status(500).json({ reply: 'AI is currently offline 😅' });
   }
 }
