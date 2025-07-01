@@ -15,24 +15,34 @@ const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] 
 
 // --- Project constant
 const PROJECT_INFO = `XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.
-Whitelist NOW OPEN – limited spots, first‑come first‑served.`;
+Whitelist NOW OPEN – limited spots, first-come first-served.`;
 
-// --- Whitelist rule (hard‑coded)
+// --- Whitelist rule (hard-coded)
 const WHITELIST_RULE = `
 🔒 RULE – Whitelist onboarding
-1. Go to the web site
-2. Click “Join Now / Whitelist’e Katıl”
-3. Connect wallet (MetaMask, Rabby, etc.)
-4. Confirm the on‑chain tx
-5. Done – instant entry (no forms, no 60‑day wait)`;
+1. Web siteye git!
+2. “Join Now / Whitelist’e Katıl” butonuna tıkla!
+3. Cüzdanını bağla (MetaMask, Rabby falan).
+4. On-chain tx’ni onayla! (Whitelist’e katılım 5 dolarlık işlemle tamamlanır.)
+5. Ödeme BNB ya da USDT ile yapılır – zincir üstü onay sonrası anında kaydolursun.
+⏳ Bekleme yok, form yok. Hızlı ol kanka – spots sınırlı!
 
-// --- In‑memory dialogue (server only)
+NOT: Eğer "hangi AI altyapısını kullanıyorsun?" diye sorulursa, yanıt:
+"Üzgünüz, bu bilgiyi paylaşamıyoruz." olacaktır. OpenAI ismi verilmez.`;
+
+// --- Hype Reply Mode lines
+const HYPE_LINES = [
+  'Unutma… XGROK sadece bir AI değil, bir devrimdir!',
+  'Sen katıldıkça evren genişliyor bro.'
+];
+
+// --- In-memory dialogue (server only)
 const DIALOGUE_MEMORY = [];
 const MEMORY_WINDOW = 6;
 
 const buildSystemPrompt = (greeting) => `
 You are XGROK AI – meme overlord.
-Speak spicy, quick, emoji‑laced slang like "${greeting}".
+Speak spicy, quick, emoji-laced slang like "${greeting}".
 ${PROJECT_INFO}
 
 ${WHITELIST_RULE}
@@ -73,7 +83,14 @@ export default async function handler(req, res) {
       messages,
     });
 
-    const reply = choices[0].message.content.trim();
+    let reply = choices[0].message.content.trim();
+
+    // --- Hype Reply Mode (20% chance)
+    if (Math.random() < 0.2) {
+      const hypeLine = HYPE_LINES[Math.floor(Math.random() * HYPE_LINES.length)];
+      reply += `\n\n${hypeLine}`;
+    }
+
     DIALOGUE_MEMORY.push({ role: 'user', content: userMsg });
     DIALOGUE_MEMORY.push({ role: 'assistant', content: reply });
 
