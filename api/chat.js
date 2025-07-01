@@ -15,7 +15,8 @@ const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] 
 
 // --- Project constant
 const PROJECT_INFO = `XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.
-Whitelist NOW OPEN – limited spots, first-come first-served.`;
+Whitelist NOW OPEN – limited spots, first-come first-served.
+Presale, whitelist bitiminden hemen sonra başlayacak. Hazırda bekle!`;
 
 // --- Whitelist rule (hard-coded)
 const WHITELIST_RULE = `
@@ -36,9 +37,17 @@ const HYPE_LINES = [
   'Sen katıldıkça evren genişliyor bro.'
 ];
 
+// --- Personal Touch lines
+const PERSONAL_LINES = [
+  'Sen buradaysan bu iş olur, sen özelsin. 🔥',
+  'Senin gibiler için var bu proje kanka, boşuna gelmedin. 🫂',
+  'XGROK seni gördüğünde protokoller kendini resetliyor bro. 😎'
+];
+
 // --- In-memory dialogue (server only)
 const DIALOGUE_MEMORY = [];
 const MEMORY_WINDOW = 6;
+let interactionCount = 0;
 
 const buildSystemPrompt = (greeting) => `
 You are XGROK AI – meme overlord.
@@ -68,6 +77,7 @@ export default async function handler(req, res) {
 
   try {
     const userMsg = req.body.message || '';
+    interactionCount += 1;
 
     const lang = await detectISO(userMsg);
     const greeting = getGreeting(lang);
@@ -89,6 +99,12 @@ export default async function handler(req, res) {
     if (Math.random() < 0.2) {
       const hypeLine = HYPE_LINES[Math.floor(Math.random() * HYPE_LINES.length)];
       reply += `\n\n${hypeLine}`;
+    }
+
+    // --- Personal touch mode (every 3rd message)
+    if (interactionCount % 3 === 0) {
+      const personalLine = PERSONAL_LINES[Math.floor(Math.random() * PERSONAL_LINES.length)];
+      reply += `\n\n${personalLine}`;
     }
 
     DIALOGUE_MEMORY.push({ role: 'user', content: userMsg });
