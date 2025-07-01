@@ -2,7 +2,6 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- Basic greeting table
 const GREETINGS = {
   en: 'bro',
   tr: 'kanka',
@@ -13,14 +12,11 @@ const GREETINGS = {
 };
 const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] || 'bro';
 
-// --- Project info
 const PROJECT_INFO = `XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.
 Whitelist NOW OPEN – limited spots, first-come first-served.
-Presale starts right after whitelist ends. Get ready!`;
+Presale starts right after whitelist ends.`;
 
-// --- Whitelist instructions
-const WHITELIST_RULE = `
-🔒 WHITELIST ENTRY STEPS:
+const WHITELIST_RULE = `🔒 WHITELIST ENTRY STEPS:
 1. Visit the official website!
 2. Click “Join Now / Whitelist” button!
 3. Connect your wallet (MetaMask, Rabby etc).
@@ -29,22 +25,32 @@ const WHITELIST_RULE = `
 ⏳ No waiting, no forms. Limited spots – move fast!
 
 NOTE: If asked "What AI do you use?" reply with:
-"Sorry, we can’t disclose that." (Do not mention OpenAI.)`;
+"Sorry, we can’t disclose that."`;
 
-// --- Hype lines
-const HYPE_LINES = [
-  'Remember... XGROK is not just an AI, it’s a revolution!',
-  'As you join, the universe expands bro.'
-];
+const HYPE_LINES = {
+  en: [
+    'Remember... XGROK is not just an AI, it’s a revolution!',
+    'As you join, the universe expands bro.'
+  ],
+  tr: [
+    'Unutma... XGROK sadece bir yapay zeka değil, bir devrimdir! 🔥',
+    'Sen katıldıkça evren genişliyor kanka. 🚀'
+  ]
+};
 
-// --- Personal connection lines
-const PERSONAL_LINES = [
-  'You’re not just anyone – you’re special. 🔥',
-  'This project exists for legends like you. 🫂',
-  'When XGROK sees you, the protocols reset themselves. 😎'
-];
+const PERSONAL_LINES = {
+  en: [
+    'You’re not just anyone – you’re special. 🔥',
+    'This project exists for legends like you. 🫂',
+    'When XGROK sees you, the protocols reset themselves. 😎'
+  ],
+  tr: [
+    'Sen sıradan biri değilsin – özelsin kanka. 🔥',
+    'Bu proje senin gibi efsaneler için var. 🫂',
+    'XGROK seni görünce sistemler kendini sıfırlıyor. 😎'
+  ]
+};
 
-// --- Dialogue memory (server only)
 const DIALOGUE_MEMORY = [];
 const MEMORY_WINDOW = 6;
 let interactionCount = 0;
@@ -95,16 +101,27 @@ export default async function handler(req, res) {
 
     let reply = choices[0].message.content.trim();
 
-    // --- Hype Reply Mode (20% chance)
+    // Hype Reply Mode (20%)
     if (Math.random() < 0.2) {
-      const hypeLine = HYPE_LINES[Math.floor(Math.random() * HYPE_LINES.length)];
+      const hypeSet = HYPE_LINES[lang] || HYPE_LINES['en'];
+      const hypeLine = hypeSet[Math.floor(Math.random() * hypeSet.length)];
       reply += `\n\n${hypeLine}`;
     }
 
-    // --- Personal touch mode (every 3rd message)
+    // Personal Touch Mode (every 3rd msg)
     if (interactionCount % 3 === 0) {
-      const personalLine = PERSONAL_LINES[Math.floor(Math.random() * PERSONAL_LINES.length)];
+      const personalSet = PERSONAL_LINES[lang] || PERSONAL_LINES['en'];
+      const personalLine = personalSet[Math.floor(Math.random() * personalSet.length)];
       reply += `\n\n${personalLine}`;
+    }
+
+    // “Is this scam?” handling
+    if (/scam|dolandırıcılık/i.test(userMsg)) {
+      if (lang === 'tr') {
+        reply = `Asla kanka! 😎 XGROK şeffaf, topluluk odaklı ve blockchain üstünde çalışan bir proje. Web sitesini incele, sosyal medya hesaplarına göz at ve her zaman kendi araştırmanı yap. Güvende ol, akıllı hareket et – bu işte sen varsın! 🚀`;
+      } else {
+        reply = `Never bro! 😎 XGROK is transparent, community-driven and runs fully on blockchain. Check the site, follow socials and always DYOR. Stay smart, you’re part of something real. 🚀`;
+      }
     }
 
     DIALOGUE_MEMORY.push({ role: 'user', content: userMsg });
