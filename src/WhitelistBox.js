@@ -279,7 +279,7 @@ const WhitelistBox = () => {
   return (
     <div className="whitelist-box">
       <h2>WHITELIST IS LIVE</h2>
-      <p>{joined} wallet joined so far ⚡</p>
+      <p>Unbelievable rewards await before presale begins! 🎁</p>
       <p className="fomo-message">Most will scroll past. A few will enter. And only they will understand. 🚀</p>
       {timeLeft === 'Whitelist has ended!' ? (
         <p className="time-left">Whitelist has ended!</p>
