@@ -1,26 +1,41 @@
-// api/chat.js
 import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- Basit selamlama tablosu
-const GREETINGS = { en: 'bro', tr: 'kanka', de: 'bruder', fr: 'frérot', es: 'hermano', it: 'fratello' };
+// --- Basic greeting table
+const GREETINGS = {
+  en: 'bro',
+  tr: 'kanka',
+  de: 'bruder',
+  fr: 'frérot',
+  es: 'hermano',
+  it: 'fratello',
+};
 const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] || 'bro';
 
-// --- Proje sabiti
+// --- Project constant
 const PROJECT_INFO = `XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.
-Whitelist açık (60 gün). Presale whitelist bitince başlar.`;
+Whitelist NOW OPEN – limited spots, first‑come first‑served.`;
 
-// --- Hafıza (sunucuya özel) 
+// --- Whitelist rule (hard‑coded)
+const WHITELIST_RULE = `
+🔒 RULE – Whitelist onboarding
+1. Go to the web site
+2. Click “Join Now / Whitelist’e Katıl”
+3. Connect wallet (MetaMask, Rabby, etc.)
+4. Confirm the on‑chain tx
+5. Done – instant entry (no forms, no 60‑day wait)`;
+
+// --- In‑memory dialogue (server only)
 const DIALOGUE_MEMORY = [];
 const MEMORY_WINDOW = 6;
-let interactionCount = 0;
 
-const buildSystemPrompt = (greeting, includeWhitelist) => `
+const buildSystemPrompt = (greeting) => `
 You are XGROK AI – meme overlord.
-Speak spicy, quick, emoji-laced slang like "${greeting}".
-Whitelist mention allowed: ${includeWhitelist ? 'YES' : 'NO'}.
+Speak spicy, quick, emoji‑laced slang like "${greeting}".
 ${PROJECT_INFO}
+
+${WHITELIST_RULE}
 `;
 
 const detectISO = async (text) => {
@@ -43,14 +58,12 @@ export default async function handler(req, res) {
 
   try {
     const userMsg = req.body.message || '';
-    interactionCount += 1;
 
     const lang = await detectISO(userMsg);
     const greeting = getGreeting(lang);
-    const includeWhitelist = interactionCount % 3 === 0;
 
     const messages = [
-      { role: 'system', content: buildSystemPrompt(greeting, includeWhitelist) },
+      { role: 'system', content: buildSystemPrompt(greeting) },
       ...DIALOGUE_MEMORY.slice(-MEMORY_WINDOW),
       { role: 'user', content: userMsg },
     ];
