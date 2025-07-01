@@ -30,11 +30,17 @@ NOTE: If asked "What AI do you use?" reply with:
 const HYPE_LINES = {
   en: [
     'Remember... XGROK is not just an AI, it’s a revolution!',
-    'As you join, the universe expands bro.'
+    'As you join, the universe expands bro.',
+    'First movers shape the game – don’t miss it!',
+    'You blinked? The future already changed.',
+    'Not hype. Just destiny catching up.'
   ],
   tr: [
     'Unutma... XGROK sadece bir yapay zeka değil, bir devrimdir! 🔥',
-    'Sen katıldıkça evren genişliyor kanka. 🚀'
+    'Sen katıldıkça evren genişliyor kanka. 🚀',
+    'İlk gelen kazanır – bu oyun hızlı oynanır. ⏳',
+    'Gözünü kırptın mı? Gelecek çoktan değişti. 👁️',
+    'Bu hype değil… Kader yakalıyor. ⚡'
   ]
 };
 
@@ -42,12 +48,16 @@ const PERSONAL_LINES = {
   en: [
     'You’re not just anyone – you’re special. 🔥',
     'This project exists for legends like you. 🫂',
-    'When XGROK sees you, the protocols reset themselves. 😎'
+    'When XGROK sees you, the protocols reset themselves. 😎',
+    'You move different. That’s why you’re here.',
+    'You’re early. That’s rare. That’s powerful.'
   ],
   tr: [
     'Sen sıradan biri değilsin – özelsin kanka. 🔥',
     'Bu proje senin gibi efsaneler için var. 🫂',
-    'XGROK seni görünce sistemler kendini sıfırlıyor. 😎'
+    'XGROK seni görünce sistemler kendini sıfırlıyor. 😎',
+    'Sen farklı hareket ediyorsun. Bu yüzden buradasın.',
+    'Erkencisin. Nadir bir şey bu. Güçlü bir şey.'
   ]
 };
 
@@ -78,6 +88,15 @@ const detectISO = async (text) => {
   }
 };
 
+function getRandomUniqueLine(set, usedSet) {
+  const options = set.filter((x) => !usedSet.includes(x));
+  if (options.length === 0) return set[Math.floor(Math.random() * set.length)];
+  return options[Math.floor(Math.random() * options.length)];
+}
+
+let lastHypeLine = '';
+let lastPersonalLine = '';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('POST only');
 
@@ -101,21 +120,20 @@ export default async function handler(req, res) {
 
     let reply = choices[0].message.content.trim();
 
-    // Hype Reply Mode (20%)
     if (Math.random() < 0.2) {
       const hypeSet = HYPE_LINES[lang] || HYPE_LINES['en'];
-      const hypeLine = hypeSet[Math.floor(Math.random() * hypeSet.length)];
+      const hypeLine = getRandomUniqueLine(hypeSet, [lastHypeLine]);
       reply += `\n\n${hypeLine}`;
+      lastHypeLine = hypeLine;
     }
 
-    // Personal Touch Mode (every 3rd msg)
     if (interactionCount % 3 === 0) {
       const personalSet = PERSONAL_LINES[lang] || PERSONAL_LINES['en'];
-      const personalLine = personalSet[Math.floor(Math.random() * personalSet.length)];
+      const personalLine = getRandomUniqueLine(personalSet, [lastPersonalLine]);
       reply += `\n\n${personalLine}`;
+      lastPersonalLine = personalLine;
     }
 
-    // “Is this scam?” handling
     if (/scam|dolandırıcılık/i.test(userMsg)) {
       if (lang === 'tr') {
         reply = `Asla kanka! 😎 XGROK şeffaf, topluluk odaklı ve blockchain üstünde çalışan bir proje. Web sitesini incele, sosyal medya hesaplarına göz at ve her zaman kendi araştırmanı yap. Güvende ol, akıllı hareket et – bu işte sen varsın! 🚀`;
