@@ -4,13 +4,21 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------- 1. Greetings table ---------- */
 const GREETINGS = {
-  en: 'bro', tr: 'kanka', de: 'bruder', fr: 'frérot', es: 'hermano', it: 'fratello'
+  en: 'bro', tr: 'kanka', de: 'bruder', fr: 'frérot', es: 'hermano', it: 'fratello',
 };
 const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] || 'bro';
 
+/* ---------- 1-b. FOMO lines ---------- */
+const FOMO_LINES = [
+  '⏳ Spots are vanishing fast – your future self will thank you.',
+  '🚨 Blink and you’ll miss the presale gains!',
+  '🔥 Supply is fixed, demand is not – whitelist or watch from the sidelines.',
+];
+const pickFomo = () => FOMO_LINES[Math.floor(Math.random() * FOMO_LINES.length)];
+
 /* ---------- 2. Project info + whitelist text ---------- */
-const PROJECT_INFO = `XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.
-Presale starts immediately after whitelist closes.`;
+const PROJECT_INFO =
+  'XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.\nPresale starts immediately after whitelist closes.';
 
 const WHITELIST_STEPS = `🔒 HOW TO JOIN THE WHITELIST ($5 fee)
 1) Visit the official website
@@ -19,12 +27,28 @@ const WHITELIST_STEPS = `🔒 HOW TO JOIN THE WHITELIST ($5 fee)
 4) Sign the on-chain TX – pay ≈ $5 in BNB or USDT
 5) TX confirmed → you're in (no forms, no waiting)`;
 
-const WHITELIST_TLDR = `Whitelist open – $5 in BNB/USDT – connect wallet – you're in.`;
+const WHITELIST_TLDR =
+  'Whitelist open – $5 in BNB/USDT – connect wallet – you\'re in.';
 
 /* ---------- 3. Trigger logic ---------- */
 const TRIGGERS = [
-  'bro', 'yo', 'wen', 'rekt', 'gm', 'ngmi', 'wagmi', 'fam', 'ayyy', 'hermano',
-  'whitelist', 'join', 'presale', 'katıl', 'nasıl', 'signup', 'list'
+  'bro',
+  'yo',
+  'wen',
+  'rekt',
+  'gm',
+  'ngmi',
+  'wagmi',
+  'fam',
+  'ayyy',
+  'hermano',
+  'whitelist',
+  'join',
+  'presale',
+  'katıl',
+  'nasıl',
+  'signup',
+  'list',
 ];
 const hasTrigger = (txt) => TRIGGERS.some((w) => txt.toLowerCase().includes(w));
 
@@ -34,7 +58,16 @@ const MEMORY_WINDOW = 6;
 let interactionCount = 0;
 
 /* ---------- 5. Prompt builder ---------- */
-const buildSystemPrompt = (greeting, includeWhitelist, extraHype, isFirstInteraction, userMsg, lang) => {
+const buildSystemPrompt = (
+  greeting,
+  includeWhitelist,
+  extraHype,
+  isFirstInteraction,
+  userMsg,
+  lang,
+) => {
+  const fomoLine = includeWhitelist ? `\n\n${pickFomo()}` : '';
+
   const basePrompt = `
 You are XGROK AI – a low-key, clever, human-like assistant with a chill vibe.
 Speak in ${lang}. Use casual language like "${greeting}" to connect.
@@ -44,7 +77,7 @@ If they say they're not interested in a topic, respect that and pivot casually.
 Speak like you're part of their circle. Drop memes, emojis, or jokes only when it feels natural.
 Only mention Commander Miles when the user explicitly asks who is behind the project, or related questions like "who created this", "project owner", or "founder".
 ${extraHype ? 'BRO MODE ACTIVATED 🧠💥' : ''}
-${PROJECT_INFO}
+${PROJECT_INFO}${fomoLine}
 
 # SPECIAL RESPONSES:
 
@@ -53,18 +86,23 @@ If the user asks if this project is a scam or fraudulent, respond firmly:
 
 If the user asks about the founder or who created this project, respond with:  
 "The project is led by Commander Miles, a mysterious and visionary figure working behind the scenes to make this happen."
-
 `;
 
   if (/whitelist|join|presale|katıl|nasıl|signup|list/i.test(userMsg)) {
-    return basePrompt + `
+    return (
+      basePrompt +
+      `
 Whitelist katılımı için şunu söyle:
-“Whitelist’e katılmak için resmi web sitesindeki Whitelistbox’a gidip 'Join Now' tuşuna basman ve 5 dolar giriş ücretini kripto cüzdanınla (MetaMask gibi) ödemen yeterlidir. Başka form doldurmaya gerek yok.”`;
+“Whitelist’e katılmak için resmi web sitesindeki Whitelistbox’a gidip 'Join Now' tuşuna basman ve 5 dolar giriş ücretini kripto cüzdanınla (MetaMask gibi) ödemen yeterlidir. Başka form doldurmaya gerek yok.”`
+    );
   }
 
   if (includeWhitelist) {
-    return basePrompt + `
-${isFirstInteraction ? WHITELIST_STEPS : WHITELIST_TLDR}`;
+    return (
+      basePrompt +
+      `
+${isFirstInteraction ? WHITELIST_STEPS : WHITELIST_TLDR}`
+    );
   }
 
   return basePrompt;
@@ -98,12 +136,27 @@ export default async function handler(req, res) {
     const greeting = getGreeting(lang);
 
     const trigger = hasTrigger(userMsg);
-    const includeWhitelist = trigger || (interactionCount % 5 === 0);
+
+    /* ---- NEW cadence logic: every 2nd OR 3rd message ---- */
+    const cadenceHit =
+      interactionCount % 2 === 0 || interactionCount % 3 === 0;
+
+    const includeWhitelist = trigger || cadenceHit;
     const extraHype = trigger;
     const isFirstInteraction = interactionCount === 1;
 
     const messages = [
-      { role: 'system', content: buildSystemPrompt(greeting, includeWhitelist, extraHype, isFirstInteraction, userMsg, lang) },
+      {
+        role: 'system',
+        content: buildSystemPrompt(
+          greeting,
+          includeWhitelist,
+          extraHype,
+          isFirstInteraction,
+          userMsg,
+          lang,
+        ),
+      },
       ...DIALOGUE_MEMORY.slice(-MEMORY_WINDOW),
       { role: 'user', content: userMsg },
     ];
@@ -120,6 +173,8 @@ export default async function handler(req, res) {
     res.status(200).json({ reply });
   } catch (err) {
     console.error('OpenAI server error:', err);
-    res.status(500).json({ reply: 'Bakım var bro, sistem kısa süreliğine offline ⚡️' });
+    res
+      .status(500)
+      .json({ reply: 'Bakım var bro, sistem kısa süreliğine offline ⚡️' });
   }
 }
