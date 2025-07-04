@@ -158,7 +158,7 @@ function App() {
           <meta name="language" content="en" />
           <meta property="og:title" content="XGROK – Meme King of Web3" />
           <meta property="og:description" content="Join the $XGROK revolution – meme, earn, rule." />
-          <meta property="og:image" content="/xgrok_social_banner.png" />
+          <meta property="og:image" content="/assets/xgrok-logo.jpg" />
           <meta property="og:url" content="https://xgrokkk.com" />
         </Helmet>
 
