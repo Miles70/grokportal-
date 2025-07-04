@@ -1,21 +1,20 @@
-// src/grokPrompts.js  – frontend helper
-// Tarayıcıda OpenAI YOK. Sadece /api/chat'a fetch atar.
+import OpenAI from 'openai';
 
-export async function getAIResponse(message) {
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    });
-    const data = await res.json();
-    return data.reply || '⚠️ AI cevap vermedi.';
-  } catch (err) {
-    console.error('Fetch error:', err);
-    return '❌ AI şu an offline, sonra dene!';
-  }
-}
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export const resetMemory = () => {
-  console.warn('resetMemory sadece backend tarafında anlamlı.');
+const GREETINGS = {
+  en: 'bro', tr: 'kanka', de: 'bruder', fr: 'frérot', es: 'hermano', it: 'fratello',
 };
+const getGreeting = (lang) => GREETINGS[lang] || GREETINGS[lang?.split('-')[0]] || 'bro';
+
+const FOMO_LINES = [
+  '⏳ Spots are vanishing fast – your future self will thank you.',
+  '🚨 Blink and you’ll miss the presale gains!',
+  '🔥 Supply is fixed, demand is not – whitelist or watch from the sidelines.',
+];
+const pickFomo = () => FOMO_LINES[Math.floor(Math.random() * FOMO_LINES.length)];
+
+const PROJECT_INFO =
+  'XGROK Tokenomics → 666 B supply • Presale 33 % • LP 25 % • Marketing 15 % • Ecosystem 17 % • Team 10 %.\nPresale starts immediately after whitelist closes.';
+
+const WHITELIST_STEPS = `🔒 HOW TO JOIN THE WHITELIST ($5 fee)
