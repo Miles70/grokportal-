@@ -4,6 +4,7 @@ import { bsc } from 'wagmi/chains';
 import { metaMask } from '@wagmi/connectors';
 import { http } from 'wagmi';
 import { getAIResponse } from './grokPrompts';
+import { Helmet } from 'react-helmet'; // Yeni import
 import StarsBackground from './StarsBackground';
 import WhitelistBox from './WhitelistBox';
 import './App.css';
@@ -149,6 +150,18 @@ function App() {
   return (
     <WagmiProvider config={config}>
       <div className="app-container">
+        <Helmet>
+          <title>XGROK – Meme King of Web3</title>
+          <meta name="description" content="XGROK is the meme-powered AI revolution. Join the presale and shape the future of crypto." />
+          <meta name="keywords" content="XGROK, meme coin, Web3, crypto presale, AI token" />
+          <meta name="robots" content="index, follow" />
+          <meta name="language" content="en" />
+          <meta property="og:title" content="XGROK – Meme King of Web3" />
+          <meta property="og:description" content="Join the $XGROK revolution – meme, earn, rule." />
+          <meta property="og:image" content="/xgrok_social_banner.png" />
+          <meta property="og:url" content="https://xgrokkk.com" />
+        </Helmet>
+
         <StarsBackground />
         <div className="connect-wallet-container">
           {isConnected ? (
@@ -186,7 +199,7 @@ function App() {
 
         <div className="container">
           <img src="/xgrok_logo.png" alt="XGROK Logo" className="xgrok-logo" />
-          <div className="xgrok-ai-chat-window">
+          <div className="xgrok-ai-chat-window" data-nosnippet>
             <div className="chat-header">
               <img src="/xgrok_ai_logo.png" alt="XGROK AI" className="chat-logo" />
               <span>XGROK AI</span>
